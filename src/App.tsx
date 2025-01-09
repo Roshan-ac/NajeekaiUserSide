@@ -6,6 +6,7 @@ import Navbar from "./components/Navbar";
 import ClientDashboard from "./components/dashboard/ClientDashboard";
 import Login from "./components/auth/Login";
 import Signup from "./components/auth/Signup";
+import OTPVerification from "./components/auth/OTPVerification";
 import Messages from "./components/dashboard/Messages";
 import Notifications from "./components/dashboard/Notifications";
 import Profile from "./components/dashboard/Profile";
@@ -42,6 +43,15 @@ function App() {
               <>
                 <Navbar />
                 <Signup />
+              </>
+            }
+          />
+          <Route
+            path="/verify-otp"
+            element={
+              <>
+                <Navbar />
+                <OTPVerification />
               </>
             }
           />

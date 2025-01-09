@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Link } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -6,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/lib/supabase";
+import { SendEmailNotification } from "@/lib/email";
 
 type UserRole = "client" | "freelancer";
 
@@ -15,6 +17,7 @@ interface ValidationStatus {
 }
 
 export default function Signup() {
+  const navigate = useNavigate();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [role, setRole] = useState<UserRole>("client");
@@ -22,6 +25,16 @@ export default function Signup() {
     email: null,
     username: null,
   });
+
+  // Clear any existing signup data on mount
+  useEffect(() => {
+    sessionStorage.removeItem("signupData");
+  }, []);
+
+  // Clear validation when role changes
+  useEffect(() => {
+    setValidation({ email: null, username: null });
+  }, [role]);
 
   // Debounced validation function
   const validateField = async (field: "email" | "username", value: string) => {
@@ -46,29 +59,37 @@ export default function Signup() {
     e.preventDefault();
     setIsLoading(true);
 
-    const formData = new FormData(e.currentTarget);
-    const email = formData.get("email") as string;
-    const username = formData.get("username") as string;
-    const firstName = formData.get("firstName") as string;
-    const middleName = formData.get("middleName") as string;
-    const lastName = formData.get("lastName") as string;
-
     try {
-      // Generate OTP
-      const { data: otpData, error: otpError } = await supabase
-        .from("Otp")
-        .insert({
-          email,
-          otp: Math.floor(100000 + Math.random() * 900000).toString(),
-          sessionId: crypto.randomUUID(),
-          expiresAt: new Date(Date.now() + 10 * 60 * 1000).toISOString(), // 10 minutes
-        })
-        .select()
-        .single();
+      const formData = new FormData(e.currentTarget);
+      const email = formData.get("email") as string;
+      const username = formData.get("username") as string;
+      const firstName = formData.get("firstName") as string;
+      const middleName = formData.get("middleName") as string;
+      const lastName = formData.get("lastName") as string;
+
+      // Generate session ID
+      const sessionId = crypto.randomUUID();
+
+      // Send OTP email
+      const emailResponse = await SendEmailNotification({
+        email: [email],
+      });
+
+      if (!emailResponse?.otp) {
+        throw new Error("Failed to generate OTP");
+      }
+
+      // Store OTP in Supabase
+      const { error: otpError } = await supabase.from("Otp").insert({
+        email,
+        otp: emailResponse.otp,
+        sessionId,
+        expiresAt: new Date(Date.now() + 10 * 60 * 1000).toISOString(), // 10 minutes
+      });
 
       if (otpError) throw otpError;
 
-      // Store signup data in session storage for after OTP verification
+      // Store signup data in session storage
       sessionStorage.setItem(
         "signupData",
         JSON.stringify({
@@ -78,7 +99,7 @@ export default function Signup() {
           middleName,
           lastName,
           role,
-          sessionId: otpData.sessionId,
+          sessionId,
         }),
       );
 
@@ -87,10 +108,10 @@ export default function Signup() {
         description: "Please check your email for the verification code.",
       });
 
-      // Redirect to OTP verification page
-      // You'll need to create this page next
-      // navigate("/verify-otp");
+      // Navigate to OTP verification page
+      navigate("/verify-otp");
     } catch (error) {
+      console.error("Signup error:", error);
       toast({
         variant: "destructive",
         title: "Error",
