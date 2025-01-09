@@ -75,19 +75,9 @@ export default function Signup() {
         email: [email],
       });
 
-      if (!emailResponse?.otp) {
+      if (!emailResponse?.success) {
         throw new Error("Failed to generate OTP");
       }
-
-      // Store OTP in Supabase
-      const { error: otpError } = await supabase.from("Otp").insert({
-        email,
-        otp: emailResponse.otp,
-        sessionId,
-        expiresAt: new Date(Date.now() + 10 * 60 * 1000).toISOString(), // 10 minutes
-      });
-
-      if (otpError) throw otpError;
 
       // Store signup data in session storage
       sessionStorage.setItem(
