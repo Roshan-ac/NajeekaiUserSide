@@ -1,15 +1,5 @@
 // Email service for frontend
-export async function SendEmailNotification({
-  email,
-  subject,
-  text,
-  template,
-}: {
-  email: string[];
-  subject?: string;
-  text?: string;
-  template?: string;
-}) {
+export async function SendEmailNotification({ email }: { email: string[] }) {
   try {
     // Call the backend API
     const response = await fetch(
@@ -35,15 +25,4 @@ export async function SendEmailNotification({
     console.error("Email service error:", error);
     throw error;
   }
-}
-
-// Simple template for OTP emails
-export function generateOTPEmailTemplate(otp: string) {
-  return `
-    <div>
-      <h2>Verify Your Email</h2>
-      <p>Your verification code is: ${otp}</p>
-      <p>This code will expire in 10 minutes.</p>
-    </div>
-  `;
 }

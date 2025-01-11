@@ -4,37 +4,41 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Github } from "lucide-react";
-import { login, DEMO_USER } from "@/lib/auth";
 import { useToast } from "@/components/ui/use-toast";
+import { loginUser } from "@/lib/auth";
 
 const Login = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsLoading(true);
 
-    const formData = new FormData(e.currentTarget);
-    const email = formData.get("email") as string;
-    const password = formData.get("password") as string;
+    try {
+      const formData = new FormData(e.currentTarget);
+      const email = formData.get("email") as string;
+      const password = formData.get("password") as string;
 
-    if (login(email, password)) {
+      await loginUser(email, password);
+
       toast({
-        title: "Login successful",
-        description: "Redirecting to dashboard...",
+        title: "Welcome back!",
+        description: "You have been successfully logged in.",
       });
+
       navigate("/dashboard");
-    } else {
+    } catch (error) {
+      console.error("Login error:", error);
       toast({
         variant: "destructive",
-        title: "Login failed",
-        description: "Invalid email or password",
+        title: "Error",
+        description: error.message || "Invalid email or password.",
       });
+    } finally {
+      setIsLoading(false);
     }
-
-    setIsLoading(false);
   };
 
   return (
@@ -43,15 +47,6 @@ const Login = () => {
         <div className="text-center space-y-2">
           <h1 className="text-3xl font-bold">Welcome back</h1>
           <p className="text-muted-foreground">Sign in to your account</p>
-          <div className="bg-muted/50 p-3 rounded-lg mt-4">
-            <p className="text-sm font-medium">Demo Credentials:</p>
-            <p className="text-sm text-muted-foreground">
-              Email: {DEMO_USER.email}
-            </p>
-            <p className="text-sm text-muted-foreground">
-              Password: {DEMO_USER.password}
-            </p>
-          </div>
         </div>
 
         <form
@@ -81,23 +76,7 @@ const Login = () => {
           </div>
 
           <Button type="submit" className="w-full" disabled={isLoading}>
-            {isLoading ? "Signing in..." : "Sign In"}
-          </Button>
-
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t" />
-            </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-white px-2 text-muted-foreground">
-                Or continue with
-              </span>
-            </div>
-          </div>
-
-          <Button variant="outline" type="button" className="w-full">
-            <Github className="mr-2 h-4 w-4" />
-            Continue with Github
+            {isLoading ? "Signing in..." : "Sign in"}
           </Button>
 
           <p className="text-center text-sm text-muted-foreground">

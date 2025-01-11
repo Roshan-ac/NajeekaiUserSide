@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/lib/supabase";
 import { SendEmailNotification } from "@/lib/email";
+import { setAuth, createSession } from "@/lib/auth";
 
 export default function OTPVerification() {
   const navigate = useNavigate();
@@ -41,46 +42,104 @@ export default function OTPVerification() {
       }
 
       const parsedData = JSON.parse(signupData);
+      const role = parsedData.role || "client";
 
-      // Verify OTP
-      const { data: otpData, error: otpError } = await supabase
-        .from("Otp")
-        .select("*")
-        .eq("sessionId", parsedData.sessionId)
-        .eq("otp", otp)
-        .single();
+      // Verify OTP using the API
+      const response = await fetch(
+        "https://servicerentalbackend.onrender.com/api/auth/verifyOtp",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            email: parsedData.email,
+            otp: otp,
+            sessionId: parsedData.sessionId,
+          }),
+        },
+      );
 
-      if (otpError || !otpData) {
-        throw new Error("Invalid OTP");
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.message || "Invalid OTP");
       }
 
-      // Check if OTP is expired
-      if (new Date(otpData.expiresAt) < new Date()) {
-        throw new Error("OTP has expired");
-      }
+      // For new users, create record in appropriate table
+      if (!result.isRegistered) {
+        const userId = crypto.randomUUID();
+        const table = role === "client" ? "Customer" : "Freelancer";
 
-      // Create user record in appropriate table
-      const table = parsedData.role === "client" ? "Customer" : "Freelancer";
-      const { error: userError } = await supabase.from(table).insert({
-        id: crypto.randomUUID(),
-        username: parsedData.username,
-        firstName: parsedData.firstName,
-        middleName: parsedData.middleName,
-        lastName: parsedData.lastName,
-        email: parsedData.email,
-      });
+        const { error: userError } = await supabase.from(table).insert({
+          id: userId,
+          username: parsedData.username,
+          firstName: parsedData.firstName,
+          middleName: parsedData.middleName,
+          lastName: parsedData.lastName,
+          email: parsedData.email,
+        });
 
-      if (userError) {
-        throw userError;
+        if (userError) {
+          throw userError;
+        }
+
+        // Create user object
+        const user = {
+          id: userId,
+          email: parsedData.email,
+          firstName: parsedData.firstName,
+          lastName: parsedData.lastName,
+          username: parsedData.username,
+          middleName: parsedData.middleName,
+          role,
+        };
+
+        // Create our own session
+        const session = await createSession(userId, role);
+
+        // Store auth data
+        setAuth(user, session);
+
+        toast({
+          title: "Success!",
+          description: "Your account has been created successfully.",
+        });
+      } else {
+        // For existing users, fetch their data from Supabase
+        const existingRole = result.role?.toLowerCase() || "client";
+        const table = existingRole === "client" ? "Customer" : "Freelancer";
+
+        const { data: userData, error: userError } = await supabase
+          .from(table)
+          .select("*")
+          .eq("email", parsedData.email)
+          .single();
+
+        if (userError || !userData) {
+          throw new Error("Failed to fetch user data");
+        }
+
+        // Create our own session
+        const session = await createSession(userData.id, existingRole);
+
+        // Store auth data
+        setAuth(
+          {
+            ...userData,
+            role: existingRole,
+          },
+          session,
+        );
+
+        toast({
+          title: "Welcome back!",
+          description: "You have been successfully logged in.",
+        });
       }
 
       // Clear signup data
       sessionStorage.removeItem("signupData");
-
-      toast({
-        title: "Success!",
-        description: "Your account has been created successfully.",
-      });
 
       // Redirect to dashboard
       navigate("/dashboard");
@@ -106,23 +165,18 @@ export default function OTPVerification() {
       const parsedData = JSON.parse(signupData);
 
       // Send new OTP email
-      const emailResponse = await SendEmailNotification({
+      const response = await SendEmailNotification({
         email: [parsedData.email],
       });
 
-      if (!emailResponse?.otp) {
-        throw new Error("Failed to generate OTP");
-      }
-
-      // Store new OTP in Supabase
-      const { error: otpError } = await supabase.from("Otp").insert({
-        email: parsedData.email,
-        otp: emailResponse.otp,
-        sessionId: parsedData.sessionId,
-        expiresAt: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
-      });
-
-      if (otpError) throw otpError;
+      // Update sessionId in storage
+      sessionStorage.setItem(
+        "signupData",
+        JSON.stringify({
+          ...parsedData,
+          sessionId: response.sessionId,
+        }),
+      );
 
       // Reset timer
       setTimeLeft(600);
@@ -158,10 +212,10 @@ export default function OTPVerification() {
           <div className="space-y-2">
             <Input
               type="text"
-              placeholder="Enter 6-digit code"
+              placeholder="Enter 4-digit code"
               value={otp}
               onChange={(e) => setOtp(e.target.value)}
-              maxLength={6}
+              maxLength={4}
               className="text-center text-2xl tracking-widest"
               required
             />
@@ -170,7 +224,7 @@ export default function OTPVerification() {
           <Button
             type="submit"
             className="w-full"
-            disabled={isLoading || otp.length !== 6}
+            disabled={isLoading || otp.length !== 4}
           >
             {isLoading ? "Verifying..." : "Verify"}
           </Button>

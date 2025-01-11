@@ -1,28 +1,97 @@
-// Dummy user for testing
-export const DEMO_USER = {
-  email: "demo@example.com",
-  password: "demo1234",
-  name: "Demo User",
-  role: "client",
-};
+import { supabase } from "./supabase";
 
-export function login(email: string, password: string) {
-  if (email === DEMO_USER.email && password === DEMO_USER.password) {
-    localStorage.setItem("user", JSON.stringify(DEMO_USER));
-    return true;
+interface User {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  username: string;
+  middleName?: string;
+  role: "client" | "freelancer";
+}
+
+// Login user
+export async function loginUser(
+  email: string,
+  password: string,
+): Promise<User> {
+  // Try client table first
+  const { data: clientData, error: clientError } = await supabase
+    .from("Customer")
+    .select("*")
+    .eq("email", email)
+    .eq("password", password)
+    .single();
+
+  if (clientData) {
+    const user = {
+      ...clientData,
+      role: "client" as const,
+    };
+    localStorage.setItem("user", JSON.stringify(user));
+    return user;
   }
-  return false;
+
+  // Try freelancer table
+  const { data: freelancerData, error: freelancerError } = await supabase
+    .from("Freelancer")
+    .select("*")
+    .eq("email", email)
+    .eq("password", password)
+    .single();
+
+  if (freelancerData) {
+    const user = {
+      ...freelancerData,
+      role: "freelancer" as const,
+    };
+    localStorage.setItem("user", JSON.stringify(user));
+    return user;
+  }
+
+  throw new Error("Invalid email or password");
 }
 
-export function logout() {
+// Register new user
+export async function registerUser(userData: {
+  email: string;
+  password: string;
+  username: string;
+  firstName: string;
+  lastName: string;
+  middleName?: string;
+  role: "client" | "freelancer";
+}): Promise<void> {
+  const table = userData.role === "client" ? "Customer" : "Freelancer";
+
+  const { error } = await supabase.from(table).insert({
+    id: crypto.randomUUID(),
+    email: userData.email,
+    password: userData.password,
+    username: userData.username,
+    firstName: userData.firstName,
+    middleName: userData.middleName,
+    lastName: userData.lastName,
+  });
+
+  if (error) {
+    console.error("Registration error:", error);
+    throw new Error("Failed to create account");
+  }
+}
+
+// Check if user is authenticated
+export function isAuthenticated(): boolean {
+  return localStorage.getItem("user") !== null;
+}
+
+// Get current user
+export function getUser(): User | null {
+  const userStr = localStorage.getItem("user");
+  return userStr ? JSON.parse(userStr) : null;
+}
+
+// Clear auth data
+export function logout(): void {
   localStorage.removeItem("user");
-}
-
-export function getUser() {
-  const user = localStorage.getItem("user");
-  return user ? JSON.parse(user) : null;
-}
-
-export function isAuthenticated() {
-  return !!getUser();
 }

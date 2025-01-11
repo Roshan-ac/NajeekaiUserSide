@@ -1,5 +1,7 @@
+import { useState } from "react";
 import DashboardLayout from "./DashboardLayout";
 import FreelancerCard from "./FreelancerCard";
+import Profile from "./Profile";
 
 const FREELANCERS = [
   {
@@ -47,13 +49,18 @@ const FREELANCERS = [
 ];
 
 export default function ClientDashboard() {
+  const [activeTab, setActiveTab] = useState("discover");
+
   return (
-    <DashboardLayout>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {FREELANCERS.map((freelancer) => (
-          <FreelancerCard key={freelancer.name} {...freelancer} />
-        ))}
-      </div>
+    <DashboardLayout activeTab={activeTab} onTabChange={setActiveTab}>
+      {activeTab === "discover" && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {FREELANCERS.map((freelancer) => (
+            <FreelancerCard key={freelancer.name} {...freelancer} />
+          ))}
+        </div>
+      )}
+      {activeTab === "profile" && <Profile />}
     </DashboardLayout>
   );
 }

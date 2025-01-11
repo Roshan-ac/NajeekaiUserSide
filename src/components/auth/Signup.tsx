@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Link } from "react-router-dom";
 import { Input } from "@/components/ui/input";
@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/lib/supabase";
-import { SendEmailNotification } from "@/lib/email";
+import { registerUser } from "@/lib/auth";
 
 type UserRole = "client" | "freelancer";
 
@@ -25,16 +25,6 @@ export default function Signup() {
     email: null,
     username: null,
   });
-
-  // Clear any existing signup data on mount
-  useEffect(() => {
-    sessionStorage.removeItem("signupData");
-  }, []);
-
-  // Clear validation when role changes
-  useEffect(() => {
-    setValidation({ email: null, username: null });
-  }, [role]);
 
   // Debounced validation function
   const validateField = async (field: "email" | "username", value: string) => {
@@ -61,61 +51,30 @@ export default function Signup() {
 
     try {
       const formData = new FormData(e.currentTarget);
-      const email = formData.get("email") as string;
-      const username = formData.get("username") as string;
-      const firstName = formData.get("firstName") as string;
-      const middleName = formData.get("middleName") as string;
-      const lastName = formData.get("lastName") as string;
+      const userData = {
+        email: formData.get("email") as string,
+        password: formData.get("password") as string,
+        username: formData.get("username") as string,
+        firstName: formData.get("firstName") as string,
+        middleName: formData.get("middleName") as string,
+        lastName: formData.get("lastName") as string,
+        role,
+      };
 
-      // Generate session ID
-      const sessionId = crypto.randomUUID();
-
-      // Send OTP email
-      const emailResponse = await SendEmailNotification({
-        email: [email],
-      });
-
-      if (!emailResponse?.otp) {
-        throw new Error("Failed to generate OTP");
-      }
-
-      // Store OTP in Supabase
-      const { error: otpError } = await supabase.from("Otp").insert({
-        email,
-        otp: emailResponse.otp,
-        sessionId,
-        expiresAt: new Date(Date.now() + 10 * 60 * 1000).toISOString(), // 10 minutes
-      });
-
-      if (otpError) throw otpError;
-
-      // Store signup data in session storage
-      sessionStorage.setItem(
-        "signupData",
-        JSON.stringify({
-          email,
-          username,
-          firstName,
-          middleName,
-          lastName,
-          role,
-          sessionId,
-        }),
-      );
+      await registerUser(userData);
 
       toast({
-        title: "Verification code sent",
-        description: "Please check your email for the verification code.",
+        title: "Account created!",
+        description: "Please sign in with your credentials.",
       });
 
-      // Navigate to OTP verification page
-      navigate("/verify-otp");
+      navigate("/login");
     } catch (error) {
       console.error("Signup error:", error);
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Something went wrong. Please try again.",
+        description: error.message || "Something went wrong. Please try again.",
       });
     } finally {
       setIsLoading(false);
@@ -228,6 +187,18 @@ export default function Signup() {
             )}
           </div>
 
+          <div className="space-y-2">
+            <Label htmlFor="password">Password *</Label>
+            <Input
+              id="password"
+              name="password"
+              type="password"
+              placeholder="Create a password"
+              required
+              minLength={8}
+            />
+          </div>
+
           <Button
             type="submit"
             className="w-full"
@@ -239,7 +210,7 @@ export default function Signup() {
               validation.username === "checking"
             }
           >
-            {isLoading ? "Creating Account..." : "Continue with Email"}
+            {isLoading ? "Creating Account..." : "Create Account"}
           </Button>
 
           <p className="text-center text-sm text-muted-foreground">

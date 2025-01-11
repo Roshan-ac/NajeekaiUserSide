@@ -1,23 +1,20 @@
 import { Suspense } from "react";
 import { useRoutes, Routes, Route, Navigate } from "react-router-dom";
-import { isAuthenticated } from "@/lib/auth";
+import { isAuthenticated, getUser } from "@/lib/auth";
 import Home from "./components/home";
 import Navbar from "./components/Navbar";
 import ClientDashboard from "./components/dashboard/ClientDashboard";
+import FreelancerDashboard from "./components/dashboard/FreelancerDashboard";
 import Login from "./components/auth/Login";
 import Signup from "./components/auth/Signup";
-import OTPVerification from "./components/auth/OTPVerification";
-import Messages from "./components/dashboard/Messages";
-import Notifications from "./components/dashboard/Notifications";
-import Profile from "./components/dashboard/Profile";
-import Search from "./components/dashboard/Search";
 import routes from "tempo-routes";
 
 function App() {
+  const user = getUser();
+
   return (
     <Suspense fallback={<p>Loading...</p>}>
       <div className="min-h-screen bg-background">
-        {/* Public Routes */}
         <Routes>
           <Route
             path="/"
@@ -31,72 +28,43 @@ function App() {
           <Route
             path="/login"
             element={
-              <>
-                <Navbar />
-                <Login />
-              </>
+              isAuthenticated() ? (
+                <Navigate to="/dashboard" replace />
+              ) : (
+                <>
+                  <Navbar />
+                  <Login />
+                </>
+              )
             }
           />
           <Route
             path="/signup"
             element={
-              <>
-                <Navbar />
-                <Signup />
-              </>
-            }
-          />
-          <Route
-            path="/verify-otp"
-            element={
-              <>
-                <Navbar />
-                <OTPVerification />
-              </>
+              isAuthenticated() ? (
+                <Navigate to="/dashboard" replace />
+              ) : (
+                <>
+                  <Navbar />
+                  <Signup />
+                </>
+              )
             }
           />
 
-          {/* Protected Dashboard Routes - No Navbar */}
+          {/* Protected Dashboard Route */}
           <Route
             path="/dashboard"
             element={
               isAuthenticated() ? (
-                <ClientDashboard />
+                user?.role === "client" ? (
+                  <ClientDashboard />
+                ) : (
+                  <FreelancerDashboard />
+                )
               ) : (
                 <Navigate to="/login" replace />
               )
-            }
-          />
-          <Route
-            path="/dashboard/search"
-            element={
-              isAuthenticated() ? <Search /> : <Navigate to="/login" replace />
-            }
-          />
-          <Route
-            path="/dashboard/messages"
-            element={
-              isAuthenticated() ? (
-                <Messages />
-              ) : (
-                <Navigate to="/login" replace />
-              )
-            }
-          />
-          <Route
-            path="/dashboard/notifications"
-            element={
-              isAuthenticated() ? (
-                <Notifications />
-              ) : (
-                <Navigate to="/login" replace />
-              )
-            }
-          />
-          <Route
-            path="/dashboard/profile"
-            element={
-              isAuthenticated() ? <Profile /> : <Navigate to="/login" replace />
             }
           />
         </Routes>
