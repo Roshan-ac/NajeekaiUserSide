@@ -51,6 +51,7 @@ export default function Signup() {
 
     try {
       const formData = new FormData(e.currentTarget);
+<<<<<<< HEAD
       const userData = {
         email: formData.get("email") as string,
         password: formData.get("password") as string,
@@ -62,6 +63,39 @@ export default function Signup() {
       };
 
       await registerUser(userData);
+=======
+      const email = formData.get("email") as string;
+      const username = formData.get("username") as string;
+      const firstName = formData.get("firstName") as string;
+      const middleName = formData.get("middleName") as string;
+      const lastName = formData.get("lastName") as string;
+
+      // Generate session ID
+      const sessionId = crypto.randomUUID();
+
+      // Send OTP email
+      const emailResponse = await SendEmailNotification({
+        email: [email],
+      });
+
+      if (!emailResponse?.success) {
+        throw new Error("Failed to generate OTP");
+      }
+
+      // Store signup data in session storage
+      sessionStorage.setItem(
+        "signupData",
+        JSON.stringify({
+          email,
+          username,
+          firstName,
+          middleName,
+          lastName,
+          role,
+          sessionId,
+        }),
+      );
+>>>>>>> 70f8aa4f95fe98ee8a5cc36348f563ef14118540
 
       toast({
         title: "Account created!",
