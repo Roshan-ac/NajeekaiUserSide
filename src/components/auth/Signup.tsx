@@ -51,7 +51,6 @@ export default function Signup() {
 
     try {
       const formData = new FormData(e.currentTarget);
-<<<<<<< HEAD
       const userData = {
         email: formData.get("email") as string,
         password: formData.get("password") as string,
@@ -63,7 +62,6 @@ export default function Signup() {
       };
 
       await registerUser(userData);
-=======
       const email = formData.get("email") as string;
       const username = formData.get("username") as string;
       const firstName = formData.get("firstName") as string;
@@ -95,7 +93,6 @@ export default function Signup() {
           sessionId,
         }),
       );
->>>>>>> 70f8aa4f95fe98ee8a5cc36348f563ef14118540
 
       toast({
         title: "Account created!",
