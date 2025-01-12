@@ -7,6 +7,7 @@ import ClientDashboard from "./components/dashboard/ClientDashboard";
 import FreelancerDashboard from "./components/dashboard/FreelancerDashboard";
 import Login from "./components/auth/Login";
 import Signup from "./components/auth/Signup";
+import RequestService from "./components/dashboard/RequestService";
 import routes from "tempo-routes";
 
 function App() {
@@ -54,13 +55,29 @@ function App() {
 
           {/* Protected Dashboard Route */}
           <Route
-            path="/dashboard"
+            path="/dashboard/*"
             element={
               isAuthenticated() ? (
                 user?.role === "client" ? (
                   <ClientDashboard />
                 ) : (
                   <FreelancerDashboard />
+                )
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+
+          {/* Request Service Route */}
+          <Route
+            path="/request-service"
+            element={
+              isAuthenticated() ? (
+                user?.role === "client" ? (
+                  <RequestService />
+                ) : (
+                  <Navigate to="/dashboard" replace />
                 )
               ) : (
                 <Navigate to="/login" replace />

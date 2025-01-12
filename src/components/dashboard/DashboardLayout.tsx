@@ -1,11 +1,12 @@
 import {
   Home,
-  Search,
+  Search as SearchIcon,
   MessageSquare,
   Bell,
   User,
   LogOut,
   FileText,
+  ClipboardList,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -22,7 +23,8 @@ interface DashboardLayoutProps {
 
 const BASE_SIDEBAR_ITEMS = [
   { icon: Home, label: "Discover", id: "discover" },
-  { icon: Search, label: "Search", id: "search" },
+  { icon: SearchIcon, label: "Search", id: "search" },
+  { icon: ClipboardList, label: "Posts", id: "posts" },
   { icon: MessageSquare, label: "Messages", id: "messages" },
   { icon: Bell, label: "Notifications", id: "notifications" },
   { icon: User, label: "Profile", id: "profile" },
@@ -40,7 +42,7 @@ export default function DashboardLayout({
     ? [
         ...BASE_SIDEBAR_ITEMS.slice(0, 2),
         { icon: FileText, label: "Proposals", id: "proposals" },
-        ...BASE_SIDEBAR_ITEMS.slice(2),
+        ...BASE_SIDEBAR_ITEMS.slice(3),
       ]
     : BASE_SIDEBAR_ITEMS;
 
@@ -91,12 +93,12 @@ export default function DashboardLayout({
       <main className="flex-1 ml-64 p-8 mt-16">
         <div className="max-w-6xl mx-auto">
           {activeTab === "discover" && (
-            <div className="flex items-center justify-between mb-8">
+            <div className="flex items-center justify-between mb-6">
               <h1 className="text-2xl font-semibold">
                 {isFreelancer ? "Available Projects" : "Discover Freelancers"}
               </h1>
               <div className="relative w-96">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <Input
                   placeholder={
                     isFreelancer

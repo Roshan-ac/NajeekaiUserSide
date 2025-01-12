@@ -1,6 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import DashboardLayout from "./DashboardLayout";
 import FreelancerCard from "./FreelancerCard";
+import Search from "./Search";
+import Posts from "./Posts";
 import Profile from "./Profile";
 
 const FREELANCERS = [
@@ -50,6 +53,15 @@ const FREELANCERS = [
 
 export default function ClientDashboard() {
   const [activeTab, setActiveTab] = useState("discover");
+  const location = useLocation();
+
+  useEffect(() => {
+    if (location.state?.activeTab) {
+      setActiveTab(location.state.activeTab);
+      // Clear the state after using it
+      window.history.replaceState({}, document.title);
+    }
+  }, [location]);
 
   return (
     <DashboardLayout activeTab={activeTab} onTabChange={setActiveTab}>
@@ -60,6 +72,8 @@ export default function ClientDashboard() {
           ))}
         </div>
       )}
+      {activeTab === "search" && <Search />}
+      {activeTab === "posts" && <Posts />}
       {activeTab === "profile" && <Profile />}
     </DashboardLayout>
   );
