@@ -1,33 +1,82 @@
-import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Github } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { loginUser } from "@/lib/auth";
 
-const Login = () => {
+export default function Login() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const [formData, setFormData] = useState({
+    email: "",
+    password: "",
+  });
+  const [errors, setErrors] = useState({
+    email: "",
+    password: "",
+  });
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  const validateEmail = (email: string) => {
+    if (!email) {
+      return "Email is required";
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return "Invalid email format";
+    }
+    return "";
+  };
+
+  const validatePassword = (password: string) => {
+    if (!password) {
+      return "Password is required";
+    }
+    if (password.length < 8) {
+      return "Password must be at least 8 characters";
+    }
+    return "";
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+
+    // Real-time validation
+    if (name === "email") {
+      setErrors((prev) => ({ ...prev, email: validateEmail(value) }));
+    } else if (name === "password") {
+      setErrors((prev) => ({ ...prev, password: validatePassword(value) }));
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Final validation
+    const emailError = validateEmail(formData.email);
+    const passwordError = validatePassword(formData.password);
+
+    if (emailError || passwordError) {
+      setErrors({
+        email: emailError,
+        password: passwordError,
+      });
+      return;
+    }
+
     setIsLoading(true);
 
     try {
-      const formData = new FormData(e.currentTarget);
-      const email = formData.get("email") as string;
-      const password = formData.get("password") as string;
-
-      await loginUser(email, password);
+      const user = await loginUser(formData.email, formData.password);
 
       toast({
         title: "Welcome back!",
         description: "You have been successfully logged in.",
       });
 
+      // Navigate based on user role
       navigate("/dashboard");
     } catch (error) {
       console.error("Login error:", error);
@@ -59,9 +108,14 @@ const Login = () => {
               id="email"
               name="email"
               type="email"
+              value={formData.email}
+              onChange={handleChange}
               placeholder="name@example.com"
-              required
+              className={errors.email ? "border-red-500" : ""}
             />
+            {errors.email && (
+              <p className="text-sm text-red-500">{errors.email}</p>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -70,25 +124,25 @@ const Login = () => {
               id="password"
               name="password"
               type="password"
+              value={formData.password}
+              onChange={handleChange}
               placeholder="Enter your password"
-              required
+              className={errors.password ? "border-red-500" : ""}
             />
+            {errors.password && (
+              <p className="text-sm text-red-500">{errors.password}</p>
+            )}
           </div>
 
-          <Button type="submit" className="w-full" disabled={isLoading}>
+          <Button
+            type="submit"
+            className="w-full"
+            disabled={isLoading || !!errors.email || !!errors.password}
+          >
             {isLoading ? "Signing in..." : "Sign in"}
           </Button>
-
-          <p className="text-center text-sm text-muted-foreground">
-            Don't have an account?{" "}
-            <Link to="/signup" className="text-primary hover:underline">
-              Sign up
-            </Link>
-          </p>
         </form>
       </div>
     </div>
   );
-};
-
-export default Login;
+}

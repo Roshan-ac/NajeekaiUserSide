@@ -133,6 +133,7 @@ export type Database = {
           id: string
           lastName: string
           middleName: string | null
+          password: string
           username: string
         }
         Insert: {
@@ -141,6 +142,7 @@ export type Database = {
           id: string
           lastName: string
           middleName?: string | null
+          password: string
           username: string
         }
         Update: {
@@ -149,13 +151,14 @@ export type Database = {
           id?: string
           lastName?: string
           middleName?: string | null
+          password?: string
           username?: string
         }
         Relationships: []
       }
       Freelancer: {
         Row: {
-          availibility: boolean
+          availability: boolean
           dailyRate: number | null
           description: string | null
           email: string
@@ -164,10 +167,11 @@ export type Database = {
           id: string
           lastName: string
           middleName: string | null
+          password: string
           username: string
         }
         Insert: {
-          availibility?: boolean
+          availability?: boolean
           dailyRate?: number | null
           description?: string | null
           email: string
@@ -176,10 +180,11 @@ export type Database = {
           id: string
           lastName: string
           middleName?: string | null
+          password: string
           username: string
         }
         Update: {
-          availibility?: boolean
+          availability?: boolean
           dailyRate?: number | null
           description?: string | null
           email?: string
@@ -188,69 +193,10 @@ export type Database = {
           id?: string
           lastName?: string
           middleName?: string | null
+          password?: string
           username?: string
         }
         Relationships: []
-      }
-      Otp: {
-        Row: {
-          createdAt: string
-          email: string
-          expiresAt: string
-          id: number
-          otp: string
-          sessionId: string
-        }
-        Insert: {
-          createdAt?: string
-          email: string
-          expiresAt: string
-          id?: number
-          otp: string
-          sessionId: string
-        }
-        Update: {
-          createdAt?: string
-          email?: string
-          expiresAt?: string
-          id?: number
-          otp?: string
-          sessionId?: string
-        }
-        Relationships: []
-      }
-      porposal: {
-        Row: {
-          freelancerId: string
-          id: string
-          postId: string
-        }
-        Insert: {
-          freelancerId: string
-          id: string
-          postId: string
-        }
-        Update: {
-          freelancerId?: string
-          id?: string
-          postId?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "porposal_freelancerId_fkey"
-            columns: ["freelancerId"]
-            isOneToOne: false
-            referencedRelation: "Freelancer"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "porposal_postId_fkey"
-            columns: ["postId"]
-            isOneToOne: false
-            referencedRelation: "Post"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       Post: {
         Row: {
@@ -304,6 +250,42 @@ export type Database = {
             columns: ["customerId"]
             isOneToOne: false
             referencedRelation: "Customer"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      Proposal: {
+        Row: {
+          freelancerId: string
+          id: string
+          isApproved: boolean | null
+          postId: string
+        }
+        Insert: {
+          freelancerId: string
+          id: string
+          isApproved?: boolean | null
+          postId: string
+        }
+        Update: {
+          freelancerId?: string
+          id?: string
+          isApproved?: boolean | null
+          postId?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "Proposal_freelancerId_fkey"
+            columns: ["freelancerId"]
+            isOneToOne: false
+            referencedRelation: "Freelancer"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "Proposal_postId_fkey"
+            columns: ["postId"]
+            isOneToOne: false
+            referencedRelation: "Post"
             referencedColumns: ["id"]
           },
         ]

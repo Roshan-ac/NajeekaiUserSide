@@ -7,7 +7,6 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/lib/supabase";
-import { registerUser } from "@/lib/auth";
 
 type UserRole = "client" | "freelancer";
 
@@ -32,17 +31,32 @@ export default function Signup() {
 
     setValidation((prev) => ({ ...prev, [field]: "checking" }));
 
-    const table = role === "client" ? "Customer" : "Freelancer";
-    const { data } = await supabase
-      .from(table)
-      .select(field)
-      .eq(field, value)
-      .single();
+    try {
+      // Check both Customer and Freelancer tables
+      const [{ data: customerData }, { data: freelancerData }] =
+        await Promise.all([
+          supabase
+            .from("Customer")
+            .select(field)
+            .eq(field, value)
+            .maybeSingle(),
+          supabase
+            .from("Freelancer")
+            .select(field)
+            .eq(field, value)
+            .maybeSingle(),
+        ]);
 
-    setValidation((prev) => ({
-      ...prev,
-      [field]: data ? "taken" : "available",
-    }));
+      const isAvailable = !customerData && !freelancerData;
+
+      setValidation((prev) => ({
+        ...prev,
+        [field]: isAvailable ? "available" : "taken",
+      }));
+    } catch (error) {
+      console.error(`Error validating ${field}:`, error);
+      setValidation((prev) => ({ ...prev, [field]: null }));
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -51,52 +65,44 @@ export default function Signup() {
 
     try {
       const formData = new FormData(e.currentTarget);
-      const userData = {
-        email: formData.get("email") as string,
+      const email = formData.get("email") as string;
+      const username = formData.get("username") as string;
+
+      // Final validation check before submission
+      const [{ data: customerData }, { data: freelancerData }] =
+        await Promise.all([
+          supabase
+            .from("Customer")
+            .select("email, username")
+            .or(`email.eq.${email},username.eq.${username}`)
+            .maybeSingle(),
+          supabase
+            .from("Freelancer")
+            .select("email, username")
+            .or(`email.eq.${email},username.eq.${username}`)
+            .maybeSingle(),
+        ]);
+
+      if (customerData || freelancerData) {
+        throw new Error("Email or username is already taken");
+      }
+
+      const table = role === "client" ? "Customer" : "Freelancer";
+      const { error } = await supabase.from(table).insert({
+        id: crypto.randomUUID(),
+        email,
         password: formData.get("password") as string,
-        username: formData.get("username") as string,
+        username,
         firstName: formData.get("firstName") as string,
         middleName: formData.get("middleName") as string,
         lastName: formData.get("lastName") as string,
-        role,
-      };
-
-      await registerUser(userData);
-      const email = formData.get("email") as string;
-      const username = formData.get("username") as string;
-      const firstName = formData.get("firstName") as string;
-      const middleName = formData.get("middleName") as string;
-      const lastName = formData.get("lastName") as string;
-
-      // Generate session ID
-      const sessionId = crypto.randomUUID();
-
-      // Send OTP email
-      const emailResponse = await SendEmailNotification({
-        email: [email],
       });
 
-      if (!emailResponse?.success) {
-        throw new Error("Failed to generate OTP");
-      }
-
-      // Store signup data in session storage
-      sessionStorage.setItem(
-        "signupData",
-        JSON.stringify({
-          email,
-          username,
-          firstName,
-          middleName,
-          lastName,
-          role,
-          sessionId,
-        }),
-      );
+      if (error) throw error;
 
       toast({
-        title: "Account created!",
-        description: "Please sign in with your credentials.",
+        title: "Success!",
+        description: "Your account has been created. Please log in.",
       });
 
       navigate("/login");

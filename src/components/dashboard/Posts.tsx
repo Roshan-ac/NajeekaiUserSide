@@ -1,60 +1,93 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
-import { useNavigate } from "react-router-dom";
-import { getUser } from "@/lib/auth";
-import { supabase } from "@/lib/supabase";
+import { Link } from "react-router-dom";
 import PostCard from "./PostCard";
+import { supabase } from "@/lib/supabase";
+import { getUser } from "@/lib/auth";
+import { useToast } from "@/components/ui/use-toast";
 
 export default function Posts() {
-  const navigate = useNavigate();
+  const { toast } = useToast();
   const user = getUser();
-  const [posts, setPosts] = useState(null);
+  const [posts, setPosts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  const fetchPosts = async () => {
+    if (!user) return;
+
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from("Post")
+        .select(
+          `
+          *,
+          Customer (id, firstName, lastName, email),
+          Proposal (id, freelancerId, isApproved)
+        `,
+        )
+        .eq("customerId", user.id)
+        .order("postedAt", { ascending: false });
+
+      if (error) throw error;
+      setPosts(data || []);
+    } catch (error) {
+      console.error("Error fetching posts:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to load your posts",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchPosts = async () => {
-      if (!user) return;
-
-      try {
-        const { data, error } = await supabase
-          .from("Post")
-          .select("*")
-          .eq("customerId", user.id)
-          .order("postedAt", { ascending: false });
-
-        if (error) throw error;
-        setPosts(data || []);
-      } catch (error) {
-        console.error("Error fetching posts:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
     fetchPosts();
-  }, [user]);
+  }, []);
+
+  if (!user) return null;
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-semibold">My Posts</h2>
-        <Button onClick={() => navigate("/request-service")}>
-          <Plus className="w-4 h-4 mr-2" /> Request Service
-        </Button>
+        <h2 className="text-2xl font-semibold">Your Service Requests</h2>
+        <Link to="/request-service">
+          <Button>
+            <Plus className="w-4 h-4 mr-2" /> New Request
+          </Button>
+        </Link>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {isLoading ? (
-          <p className="text-muted-foreground col-span-full">Loading...</p>
-        ) : posts?.length > 0 ? (
-          posts.map((post) => <PostCard key={post.id} {...post} />)
-        ) : (
-          <p className="text-muted-foreground col-span-full">
+      {isLoading ? (
+        <p className="text-muted-foreground text-center">Loading posts...</p>
+      ) : posts.length > 0 ? (
+        <div className="space-y-6">
+          {posts.map((post) => (
+            <PostCard
+              key={post.id}
+              {...post}
+              clientName={`${post.Customer.firstName} ${post.Customer.lastName}`}
+              clientAvatar={`https://api.dicebear.com/7.x/avataaars/svg?seed=${post.Customer.email}`}
+              customerId={post.customerId}
+              onApplicationUpdate={fetchPosts}
+            />
+          ))}
+        </div>
+      ) : (
+        <div className="text-center space-y-4">
+          <p className="text-muted-foreground">
             You haven't posted any service requests yet.
           </p>
-        )}
-      </div>
+          <Link to="/request-service">
+            <Button>
+              <Plus className="w-4 h-4 mr-2" /> Create Your First Request
+            </Button>
+          </Link>
+        </div>
+      )}
     </div>
   );
 }
