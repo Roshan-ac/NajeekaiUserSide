@@ -120,7 +120,11 @@ export default function RequestService() {
         description: "Your service request has been posted.",
       });
 
-      navigate("/dashboard", { state: { activeTab: "posts" } });
+      // Navigate to dashboard with posts tab
+      navigate("/dashboard", {
+        replace: true,
+        state: { activeTab: "posts" },
+      });
     } catch (error) {
       console.error("Error posting service request:", error);
       toast({

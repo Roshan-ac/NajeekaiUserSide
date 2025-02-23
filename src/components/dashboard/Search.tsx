@@ -28,59 +28,36 @@ export default function Search({ isClientView = false }: SearchProps) {
               `
               *,
               Customer (id, firstName, lastName, email)
-            `
+            `,
             )
             .order("postedAt", { ascending: false });
 
           if (error) throw error;
-          
+
           let filteredData = data || [];
           if (searchQuery.trim()) {
             const searchTerm = searchQuery.toLowerCase();
-            filteredData = filteredData.filter(post => 
-              post.caption.toLowerCase().includes(searchTerm) ||
-              post.description.toLowerCase().includes(searchTerm) ||
-              post.location.toLowerCase().includes(searchTerm) ||
-              post.requiredSkills?.some(skill => 
-                skill.toLowerCase().includes(searchTerm)
-              )
+            filteredData = filteredData.filter(
+              (post) =>
+                post.caption.toLowerCase().includes(searchTerm) ||
+                post.description.toLowerCase().includes(searchTerm) ||
+                post.location.toLowerCase().includes(searchTerm) ||
+                post.requiredSkills?.some((skill) =>
+                  skill.toLowerCase().includes(searchTerm),
+                ),
             );
           }
-          
+
           setResults(filteredData);
-          return;
-        }
-
-      setIsLoading(true);
-      try {
-        const query = searchQuery.toLowerCase();
-
-        if (isClientView) {
+        } else {
           // Search freelancers
           const { data, error } = await supabase
             .from("Freelancer")
             .select("*")
             .or(
-              `firstName.ilike.%${query}%,lastName.ilike.%${query}%,description.ilike.%${query}%`,
+              `firstName.ilike.%${searchQuery}%,lastName.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%`,
             )
             .order("firstName");
-
-          if (error) throw error;
-          setResults(data || []);
-        } else {
-          // Search posts for freelancers
-          const { data, error } = await supabase
-            .from("Post")
-            .select(
-              `
-              *,
-              Customer (id, firstName, lastName, email)
-            `,
-            )
-            .or(
-              `caption.ilike.%${query}%,description.ilike.%${query}%,location.ilike.%${query}%`,
-            )
-            .order("postedAt", { ascending: false });
 
           if (error) throw error;
           setResults(data || []);

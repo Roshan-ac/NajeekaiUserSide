@@ -15,41 +15,50 @@ export async function loginUser(
   email: string,
   password: string,
 ): Promise<User> {
-  // Try client table first
-  const { data: clientData, error: clientError } = await supabase
-    .from("Customer")
-    .select("*")
-    .eq("email", email)
-    .eq("password", password)
-    .single();
+  try {
+    // Try client table first
+    const { data: clientData, error: clientError } = await supabase
+      .from("Customer")
+      .select("*")
+      .eq("email", email)
+      .eq("password", password)
+      .single();
 
-  if (clientData) {
-    const user = {
-      ...clientData,
-      role: "client" as const,
-    };
-    localStorage.setItem("user", JSON.stringify(user));
-    return user;
+    if (clientData) {
+      const user = {
+        ...clientData,
+        role: "client" as const,
+      };
+      localStorage.setItem("user", JSON.stringify(user));
+      // Create session
+      await createSession(user.id, "client");
+      return user;
+    }
+
+    // Try freelancer table
+    const { data: freelancerData, error: freelancerError } = await supabase
+      .from("Freelancer")
+      .select("*")
+      .eq("email", email)
+      .eq("password", password)
+      .single();
+
+    if (freelancerData) {
+      const user = {
+        ...freelancerData,
+        role: "freelancer" as const,
+      };
+      localStorage.setItem("user", JSON.stringify(user));
+      // Create session
+      await createSession(user.id, "freelancer");
+      return user;
+    }
+
+    throw new Error("Invalid email or password");
+  } catch (error) {
+    console.error("Login error:", error);
+    throw new Error("Invalid email or password");
   }
-
-  // Try freelancer table
-  const { data: freelancerData, error: freelancerError } = await supabase
-    .from("Freelancer")
-    .select("*")
-    .eq("email", email)
-    .eq("password", password)
-    .single();
-
-  if (freelancerData) {
-    const user = {
-      ...freelancerData,
-      role: "freelancer" as const,
-    };
-    localStorage.setItem("user", JSON.stringify(user));
-    return user;
-  }
-
-  throw new Error("Invalid email or password");
 }
 
 // Register new user

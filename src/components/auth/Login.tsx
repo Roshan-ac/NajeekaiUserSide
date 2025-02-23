@@ -77,7 +77,7 @@ export default function Login() {
       });
 
       // Navigate based on user role
-      navigate("/dashboard");
+      navigate("/dashboard", { replace: true });
     } catch (error) {
       console.error("Login error:", error);
       toast({

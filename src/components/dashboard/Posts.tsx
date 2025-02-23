@@ -8,6 +8,10 @@ import { getUser } from "@/lib/auth";
 import { useToast } from "@/components/ui/use-toast";
 
 export default function Posts() {
+  // Force re-fetch when component mounts
+  useEffect(() => {
+    fetchPosts();
+  }, []);
   const { toast } = useToast();
   const user = getUser();
   const [posts, setPosts] = useState([]);
